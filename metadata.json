@@ -1,0 +1,6 @@
+{
+  "name": "StudyDeck",
+  "description": "Structured AI study assistant that converts free-form notes or topics into interactive flashcards, quizzes, and targeted re-testing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

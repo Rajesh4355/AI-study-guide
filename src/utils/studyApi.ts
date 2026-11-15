@@ -30,7 +30,7 @@ export interface ApiDeckFailure {
 
 export type ApiDeckResult = ApiDeckSuccess | ApiDeckFailure;
 
-const REQUEST_TIMEOUT_MS = 45000;
+const REQUEST_TIMEOUT_MS = 60000;
 
 function withTimeoutSignal(externalSignal: AbortSignal): {
   signal: AbortSignal;
@@ -116,7 +116,7 @@ export async function generateStudyDeck(params: GenerateDeckParams): Promise<Api
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
 
         const frames = buffer.split('\n\n');
         buffer = frames.pop() ?? '';

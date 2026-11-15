@@ -9,7 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 3000);
-const MODEL_NAME = 'gemini-4-hydrogen';
+const MODEL_NAME = 'gemini-3.1-flash-lite';
+const THINKING_LEVEL = ThinkingLevel.MINIMAL;
 
 const studyDeckSchema = {
   type: Type.OBJECT,
@@ -82,6 +83,7 @@ function createAiClient(): GoogleGenAI {
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
+      timeout: 50000,
       headers: {
         'User-Agent': 'aistudio-build',
       },
@@ -125,7 +127,12 @@ function classifyGeminiError(err: unknown): {
     };
   }
 
-  if (rawMessage.includes('abort') || rawMessage.includes('TIMEOUT')) {
+  if (
+    rawMessage.includes('abort') ||
+    rawMessage.includes('TIMEOUT') ||
+    rawMessage.includes('504') ||
+    rawMessage.includes('DEADLINE_EXCEEDED')
+  ) {
     return {
       status: 504,
       errorCode: 'TIMEOUT',
@@ -146,7 +153,7 @@ function writeSseEvent(res: Response, event: string, payload: unknown): void {
   res.write(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
-async function runWithRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+async function runWithRetry<T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -158,14 +165,12 @@ async function runWithRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T
         msg.includes('500') ||
         msg.includes('502') ||
         msg.includes('503') ||
-        msg.includes('504') ||
         msg.includes('429') ||
         msg.includes('RESOURCE_EXHAUSTED') ||
         msg.includes('UNAVAILABLE') ||
         msg.includes('INTERNAL') ||
         msg.includes('fetch failed') ||
-        msg.includes('ECONNRESET') ||
-        msg.includes('ETIMEDOUT');
+        msg.includes('ECONNRESET');
       if (!isTransient || attempt === maxAttempts) {
         throw err;
       }
@@ -233,7 +238,7 @@ async function startServer() {
               systemInstruction,
               responseMimeType: 'application/json',
               responseSchema: studyDeckSchema,
-              thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+              thinkingConfig: { thinkingLevel: THINKING_LEVEL },
             },
           })
         );
@@ -273,7 +278,7 @@ async function startServer() {
             systemInstruction,
             responseMimeType: 'application/json',
             responseSchema: studyDeckSchema,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            thinkingConfig: { thinkingLevel: THINKING_LEVEL },
           },
         })
       );
@@ -352,7 +357,7 @@ async function startServer() {
             systemInstruction,
             responseMimeType: 'application/json',
             responseSchema: studyDeckSchema,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            thinkingConfig: { thinkingLevel: THINKING_LEVEL },
           },
         })
       );
